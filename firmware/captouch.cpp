@@ -43,9 +43,8 @@ void CapTouch::detachIntr() {
 }
 
 void CapTouch::attachIntr() {
-//    auto mylambda = [&]() {this->touchSense();} ;
-//    attachInterrupt(m_sensorPin,  (void (*)())mylambda , RISING);
-    attachInterrupt(m_sensorPin,  touchSense , RISING);
+    auto mylambda = [&]() {this->touchSense();} ;
+    attachInterrupt(m_sensorPin, mylambda , RISING);
     m_intrIsAttached = true;
 }
 

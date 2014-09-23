@@ -60,7 +60,7 @@ class CapTouch
     protected:
 		// Currently this is static until we can pass a lambda to the
 		// attachInterrupt() call
-		static void touchSense();
+		void touchSense();
         
         long touchSampling();
         Event touchEventCheck();
