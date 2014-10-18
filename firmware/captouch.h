@@ -75,6 +75,7 @@ class CapTouch
         // reading and baseline
         long m_tReading;
         long m_tBaseline;
+        long m_tBaselineSum;
         
         // timestamps
         unsigned long m_tS;

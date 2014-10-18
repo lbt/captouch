@@ -55,6 +55,8 @@ void CapTouch::setup()
     attachIntr();
     // calibrate touch sensor- Keep hands off!!!
     m_tBaseline = touchSampling();    // initialize to first reading
+    m_tBaselineSum = m_tBaseline * 100;
+
 	// time stamps
 	m_lastUpdate = 0;
     
@@ -68,10 +70,6 @@ CapTouch::Event CapTouch::getEvent()
 	{
 		// check Touch UI
 		touchEvent = touchEventCheck();
-        #ifdef CAPTOUCH_DEBUG
-        Serial.print("check at ");
- 		Serial.print(m_lastUpdate);
- 		#endif
 
 		// time stamp updated
 		m_lastUpdate = millis();
@@ -136,12 +134,25 @@ long CapTouch::touchSampling()
         tDelay = 0;     // this is an error condition!
     }
 
-    //autocalibration using exponential moving average on data below trigger point
-    if (tDelay<(m_tBaseline + m_tBaseline/4))
-    {
-        m_tBaseline = m_tBaseline + (tDelay - m_tBaseline)/8;
-    }
+    // autocalibration using moving average of essentially 20 readings
+	// when in Releas-ed state.
+	if (m_touchLast == LOW) {
+		m_tBaselineSum += (tDelay - m_tBaseline) * 5;
+		m_tBaseline = m_tBaselineSum / 100;
+	} else {
+		// auto calibrate *really* slowly in Touch-ed state to allow
+		// for a touch-pad to be connected after setup() has run;
+		// disconnected/reconnected or other odd changes. Technically
+		// this means that a Touch event will time out eventually.
+		// In practice this is order of minutes.
+		// tDelay is always > m_tBaseline in Touch
+		m_tBaselineSum++;
+		m_tBaseline = m_tBaselineSum / 100;
+	}
+
     #ifdef CAPTOUCH_DEBUG
+	Serial.print("check at ");
+	Serial.print(m_lastUpdate);
 	Serial.print(" Delay:baseline=");
 	Serial.print(tDelay);
 	Serial.print(":");
