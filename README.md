@@ -2,7 +2,7 @@ CapTouch is library to provide simple touch sensor for the Spark.
 
 A port of John van Saders' code to a library and a C++/Class based solution.
 
-See: http://jvs.me/touch-sensing-on-the-spark-core/
+See: http://jvs.me/spark-core/touch-sensing-on-the-spark-core/
 
 Usage:
 
@@ -16,11 +16,12 @@ Usage:
 // see: http://docs.spark.io/firmware/#interrupts-attachinterrupt
 CapTouch Touch(D4, D5);
 
-setup() {
+void setup() {
+    pinMode(D7,OUTPUT);
     Touch.setup();
 }
 
-loop() {
+void loop() {
 
     CapTouch::Event touchEvent = Touch.getEvent();
 
