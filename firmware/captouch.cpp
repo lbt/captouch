@@ -35,6 +35,7 @@ CapTouch::CapTouch(int sensorPin, int driverPin) :
     m_touchDebounceTimeLast = 0;
     m_touchNow = LOW;
     m_touchLast = LOW;
+	m_tLastDelay = 0;
 }
 
 void CapTouch::detachIntr() {
@@ -56,8 +57,8 @@ void CapTouch::setup()
     attachIntr();
     // calibrate touch sensor- Keep hands off!!!
     m_tBaseline = touchSampling();    // initialize to first reading
-    m_tBaselineSum = m_tBaseline * 100;
-
+    m_tBaselineSum = m_tBaseline * CAPTOUCH_TOUCH_POOL;
+	m_tJitterSum = 0;
 	// time stamps
 	m_lastUpdate = 0;
     
@@ -95,6 +96,7 @@ long CapTouch::touchSampling()
 {
     long tDelay = 0;
     int mSample = 0;
+	long jitter = 0;
     
     for (int i=0; i<32; i++)
     {
@@ -102,11 +104,14 @@ long CapTouch::touchSampling()
         pinMode(m_sensorPin, OUTPUT);
         digitalWrite(m_driverPin,LOW);
         digitalWrite(m_sensorPin,LOW);
-        
+		// Now give the pin time to actually go low and drain "the
+		// capacitor"
+        delay(2);
         // revert to high impedance input
         pinMode(m_sensorPin,INPUT);
         
-        // timestamp & transition sPin to HIGH and wait for interrupt in a read loop
+        // timestamp & transition sPin to HIGH and wait for interrupt
+        // in a read loop
         m_tS = micros();
         CapTouch_tR = m_tS;
         digitalWrite(m_driverPin,HIGH);
@@ -124,22 +129,37 @@ long CapTouch::touchSampling()
         }
         
     }
+	// Leave it in LOW mode keeping the capacitor drained.
+	pinMode(m_sensorPin, OUTPUT);
+	digitalWrite(m_sensorPin,LOW);
     
     // calculate average RC delay [usec]
     if (mSample>0)
     {
         tDelay = tDelay/mSample;
-    }
+		m_tLastDelay = tDelay;
+	}
     else
     {
         tDelay = 0;     // this is an error condition!
-    }
+#ifdef CAPTOUCH_DEBUG
+		Serial.println("Error - no delay obtained in sample");
+#endif
+	}
 
-    // autocalibration using moving average of essentially 20 readings
+    // autocalibration using moving average of 1/5 of pool size
 	// when in Releas-ed state.
-	if (m_touchLast == LOW) {
-		m_tBaselineSum += (tDelay - m_tBaseline) * 5;
-		m_tBaseline = m_tBaselineSum / 100;
+	if (m_touchSenseLast == LOW) {
+		m_tBaselineSum += (tDelay - m_tBaseline) * 2;
+		m_tBaseline = m_tBaselineSum / CAPTOUCH_TOUCH_POOL;
+		if (tDelay > m_tBaseline) {
+			jitter = tDelay - m_tBaseline;
+		} else {
+			jitter = m_tBaseline - tDelay;
+		}
+		m_tJitterSum -= m_tJitter;
+		m_tJitterSum += jitter;
+		m_tJitter = m_tJitterSum / CAPTOUCH_JITTER_POOL;
 	} else {
 		// auto calibrate *really* slowly in Touch-ed state to allow
 		// for a touch-pad to be connected after setup() has run;
@@ -148,16 +168,18 @@ long CapTouch::touchSampling()
 		// In practice this is order of minutes.
 		// tDelay is always > m_tBaseline in Touch
 		m_tBaselineSum++;
-		m_tBaseline = m_tBaselineSum / 100;
+		m_tBaseline = m_tBaselineSum / CAPTOUCH_TOUCH_POOL;
 	}
 
     #ifdef CAPTOUCH_DEBUG
 	Serial.print("check at ");
 	Serial.print(m_lastUpdate);
-	Serial.print(" Delay:baseline=");
+	Serial.print(" Delay:baseline:jitter=");
 	Serial.print(tDelay);
 	Serial.print(":");
 	Serial.print(m_tBaseline);
+	Serial.print(":");
+	Serial.print(m_tJitter);
 	#endif
 
     return tDelay;
@@ -183,9 +205,10 @@ CapTouch::Event CapTouch::touchEventCheck()
     m_tReading = touchSampling();
     
     // touch sensor is HIGH if trigger point 1.25*Baseline
-    if (m_tReading>(m_tBaseline + m_tBaseline/4)) {
-        touchSense = HIGH; 
-    } else {
+    if (m_tReading>(m_tBaseline + m_tBaseline/4) &&
+		m_tReading>(m_tBaseline + m_tJitter*2)) {
+		touchSense = HIGH;
+	} else {
         touchSense = LOW; 
     }
     

@@ -25,6 +25,10 @@
 // Polling times in [ms]
 #define CAPTOUCH_POLL_TIME 20
 
+#define CAPTOUCH_TOUCH_POOL 100
+#define CAPTOUCH_JITTER_POOL 40
+
+
 // Useful debugging output
 #define CAPTOUCH_DEBUG 1
 
@@ -76,6 +80,9 @@ class CapTouch
         long m_tReading;
         long m_tBaseline;
         long m_tBaselineSum;
+        long m_tLastDelay;
+        long m_tJitterSum;
+        long m_tJitter;
         
         // timestamps
         unsigned long m_tS;
