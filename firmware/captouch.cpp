@@ -23,7 +23,7 @@
 #include "captouch.h"
 
 // This has to be accessible by the ISR until the ISR supports lambdas
-unsigned long CapTouch_tR = 0;
+volatile unsigned long CapTouch_tR = 0;
 
 CapTouch::CapTouch(int sensorPin, int driverPin) :
      m_intrIsAttached(false)
