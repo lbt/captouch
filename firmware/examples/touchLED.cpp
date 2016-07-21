@@ -1,23 +1,28 @@
-#include "application.h"												\
+#include "application.h"
 #include "captouch.h"
 
 // Define which pins are connected with a 1-10M resistor.
-// The first pin will be connected to the touch sensor
-// and *must* be D0, D1, D2, D3, D4 A0, A1, A3, A4, A5, A6, A7
+// The first pin (pTouch) will be connected to the touch sensor
+// and *must* be D0, D1, D2, D3, D4, A0, A1, A3, A4, A5, A6, or A7
 // see: http://docs.spark.io/firmware/#interrupts-attachinterrupt
-CapTouch Touch(D4, D5);
 
-setup() {
+#define pTouch	D2
+#define pSense	D3
+#define pLED	D4
+
+CapTouch Touch(pTouch, pSense);
+
+void setup() {
     Touch.setup();
 }
 
-loop() {
+void loop() {
     CapTouch::Event touchEvent = Touch.getEvent();
 
     if (touchEvent == CapTouch::TouchEvent) {
-		digitalWrite(D7, HIGH); // LED on
+		digitalWrite(pLED, HIGH); // LED on
     } else if (touchEvent == CapTouch::ReleaseEvent) {
-		digitalWrite(D7, LOW);  // LED off
+		digitalWrite(pLED, LOW);  // LED off
     }
 
     delay(100);
